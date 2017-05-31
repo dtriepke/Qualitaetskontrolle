@@ -1,5 +1,5 @@
 ---
-title: "Übungsaufgaben statistische Qualitätskontrolle"
+title: "?bungsaufgaben statistische Qualit?tskontrolle"
 output: html_notebook
 ---
 
@@ -8,19 +8,19 @@ output: html_notebook
 C_p_func <- function(go, gu, sd){ (go - gu) / (6 * sd) }
 C_pk_func <- function(go, gu, sd, mu){ min( (go - mu)/(3*sd), (mu - gu)/(3*sd) )}
 
-C_conf_func <- function(n, alpha, C, centered = TRUE){
+C_conf_func <- function(n, alpha, C, centered = TRUE, print = TRUE){
   if(centered){
   UG <- C * sqrt( qchisq(alpha/2, df = n -1) / (n - 1) ) 
   OB <- C * sqrt( qchisq(1- alpha/2, df = n -1) / (n - 1) ) 
   
-  cat("UG = ", UG, "\t", "OB = ", OB)
+  if(print){  cat("UG = ", UG, "\t", "OB = ", OB) }
   return(list(UG = UG, OG = OB))
   }
   else{
   UG <- C * (1 - qnorm( 1 - alpha/2) * sqrt( 1 / (9 * n * C^2) + 1 / (2 * n - 2) ))
   OB <- C * (1 + qnorm( 1 - alpha/2) * sqrt( 1 / (9 * n * C^2) + 1 / (2 * n - 2) ))
   
-  cat("UG = ", UG, "\t", "OB = ", OB)
+  if(print){  cat("UG = ", UG, "\t", "OB = ", OB) }
   return(list(UG = UG, OG = OB))
   }
 }
@@ -58,7 +58,7 @@ paste(c("Wu = ", "Wo = "),c( round(Wu, 2), round(Wo, 2)) )
 ***
 
 # Aufgabe 2
-## (a) $\bar{X}$ - Karte: "Laenge von Nieten"
+## (a) $\bar{X}$ - Karte: *"Laenge von Nieten"*
 
 ```{r}
 n <- 20
@@ -84,6 +84,13 @@ C_pk_conf <- C_conf_func(n = n, alpha = alpha, C = C_pk, centered = FALSE)
 ```
 
 
+
+## (b) u - Karte: *"Fehler in produzierten Stoffballen"*
+
+
+```{r}
+
+```
 
 
 
