@@ -5,7 +5,7 @@ output:
   html_document: default
 ---
 
-# Pre-Processings
+# Funktionen
 ```{r}
 rm(list = ls(all = TRUE))
 
@@ -93,9 +93,9 @@ C_pk_conf <- C_conf_func(n = n, alpha = alpha, C = C_pk, centered = FALSE)
 
 Produzierte Stoffballen werden hinsichtlich der Fehlerzahl ueberwacht. Als u0 wird nach Voruntersuchungen 0.25 angesetzt. 
 Außerdem sei w = 1.64485 und κ = 2.78215.
-Es wird die u - Karte mit der p -Karte vergliche um die Prozesskonsistenz zu validieren.  
+Es wird die u - Karte mit der p -Karte verglichen um die Prozesskonsistenz zu validieren.  
 
-> Aus der Tabelle erkennt man, dass der Prozess bei beiden Karten im 8 Los außer Kontrolle ist. 
+> Aus der Tabelle erkennt man, dass der Prozess bei beiden Karten im achten Los außer Kontrolle ist. 
 
 ```{r}
 library(dplyr)
@@ -186,5 +186,84 @@ axis(2, seq(0,1, by = 0.1))
 legend("topright", c("Prozess","u - Karte", "p - Karte", expression(u[0])), lty = c(1,1,1,1), col = c("black","blue", "purple", "green"), lwd = c(1,2,2,2))
 	
 ```
+
+
+#Aufgabe 3
+Bestimmen der Operationscharaczeristrik eines einfachen Prüfplans mit 
+
+* *N* = 1000  
+* *c* = 4  
+* *n* = 100
+
+```{r}
+N <- 1000
+c <- 4
+n <- 100
+```
+
+**Operationscharacteristik L(p)**
+
+```{r}
+L_p_func <- function(N, n, c, p, print = TRUE){
+  
+  # PART: sanity check part------
+  stopifnot(p <= 1 & p >= 0 ) # check whether p is element (0,1)
+  for (x in c(N,n,c)){
+    # N, n, c must be a integer/ double
+    stopifnot(abs(x - round(x)) < .Machine$double.eps^0.5)
+  }
+  
+  # PART: claculation --------
+  p_range <- p # p can be a scalar or a set
+  L <- 0 # forst entry is abitrarly number and will be removed after loop
+  
+  # forst loop takes the stated subspace od the definition range
+  for (p in p_range){
+    # calc M regarding p = M/N
+    M <- round(p*N, 0)
+    
+    # second loop calc a for a given p the operation characteristic
+    tmp <- 0 # temporary storage
+    for ( i in c(0:c)){
+      tmp <- tmp + dhyper(i, M, N - M, n)
+    } 
+    L <- c(L, tmp) # storage the result for L in a vector
+  }
+  
+  # PART: output settings -----
+  output <- list(L = L[-1], p = p_range) 
+  if(print){print(paste0("L(",p_range,") = ", round(output$L,5) ))}
+  return(output)
+}
+
+```
+
+
+
+```{r}
+l_p <- L_p_func(1000, 147,3, p = seq(0,1, by = 0.01))
+
+plot(x = l_p$p, y = l_p$L, type = "l")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
