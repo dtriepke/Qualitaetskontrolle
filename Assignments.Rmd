@@ -5,6 +5,13 @@ output:
   html_document: default
 ---
 
+```{r, include=FALSE}
+library(dplyr)
+library(knitr)
+library(plotly)
+```
+
+
 # Funktionen
 ```{r}
 rm(list = ls(all = TRUE))
@@ -98,8 +105,6 @@ Es wird die u - Karte mit der p -Karte verglichen um die Prozesskonsistenz zu va
 > Aus der Tabelle erkennt man, dass der Prozess bei beiden Karten im achten Los außer Kontrolle ist. 
 
 ```{r}
-library(dplyr)
-library(knitr)
 u0 <- 0.25
 w <- qnorm(0.95)
 k <- qnorm(0.9973)
@@ -239,15 +244,22 @@ L_p_func <- function(N, n, c, p, print = TRUE){
 ```
 
 
+**Test**
 
 ```{r}
-l_p <- L_p_func(1000, 147,3, p = seq(0,1, by = 0.01))
+L_p <- L_p_func(100, 10,3, p = seq(0,1, by = 0.05))
 
-plot(x = l_p$p, y = l_p$L, type = "l")
+plot_ly(x = L_p$p, y = l_p$L, type = "scatter", mode = "lines") %>% 
+  layout(xaxis = list(title = "p"),
+         yaxis = list(title = "L(P)"))
 
 ```
 
 
+**Algorithmus von Guenther**
+```{r}
+
+```
 
 
 
