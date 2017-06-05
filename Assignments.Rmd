@@ -3,6 +3,7 @@ title: "Uebungsaufgaben statistische Qualitaetskontrolle"
 output:
   html_notebook: default
   html_document: default
+runtime: shiny
 ---
 
 ```{r, include=FALSE}
@@ -302,7 +303,7 @@ find_n_c(n = 1, c = 0, alpha  = 0.05, AQL = 0.01, beta = 0.1, RQL = 0.04, N = 40
 
 
 
-```{r}
+```{r, fig.height=15}
 library(shiny)
 
 
