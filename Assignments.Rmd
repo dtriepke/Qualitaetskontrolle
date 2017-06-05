@@ -10,6 +10,7 @@ runtime: shiny
 library(dplyr)
 library(knitr)
 library(plotly)
+library(shiny)
 ```
 
 
@@ -301,41 +302,27 @@ find_n_c(n = 1, c = 0, alpha  = 0.05, AQL = 0.01, beta = 0.1, RQL = 0.04, N = 40
 ```
 
 
+```{r, echo=FALSE}
+sliderInput(inputId = "one_min_alpha", label = "1 - alpha",
+                  value = 1, min = 0, max = 1)
+    
+sliderInput(inputId = "AQL", label = "AQL",
+                  value = 1, min = 0, max = 1)
 
-
-```{r, fig.height=15}
-library(shiny)
-
-
-ui <- fluidPage(
-  headerPanel("Operations Charakteristic for Hyp() with Guenther's Algorithmus", windowTitle = "Operations Charakteristic for Hyp()"),
-  titlePanel("Control Pannel"),
-  sidebarLayout(
-    sidebarPanel(
-      sliderInput(inputId = "one_min_alpha", label = "1 - alpha",
-                  value = 1, min = 0, max = 1),
-      sliderInput(inputId = "AQL", label = "AQL",
-                  value = 1, min = 0, max = 1),
       sliderInput(inputId = "beta", label = "beta",
-                  value = 1, min = 0, max = 1),
-      sliderInput(inputId = "RQL", label = "RQL",
-                  value = 1, min = 0, max = 1),
-      numericInput(inputId = "N", label = "N",
-                   value = 400, min = 1, max = 5000),
-      actionButton("action", label = "find optimal plan")
-    ),
-    mainPanel(
-      plotlyOutput("plot"),
-      h3(textOutput("text"))
+                  value = 1, min = 0, max = 1)
       
-    )
-  )
-)
+      sliderInput(inputId = "RQL", label = "RQL",
+                  value = 1, min = 0, max = 1)
+      
+      numericInput(inputId = "N", label = "N",
+                   value = 400, min = 1, max = 5000)
+      
+      actionButton("action", label = "find optimal plan")
+```
 
-server <- function(input, output) {
-  
-  # # renderPlotly() also understands ggplot2 objects!
-  output$plot <- renderPlotly({
+```{r, echo=FALSE}
+renderPlotly({
     input$action
     tmp <- isolate(find_n_c(n = 1, c = 0, alpha  = 1 - input$one_min_alpha, AQL = input$AQL, beta = input$beta, RQL = input$RQL, N = input$N))
     L_p <- isolate(L_p_func(N = input$N, n = tmp$n, c = tmp$c, p = seq(0,1, by = 0.01), print = FALSE))
@@ -345,23 +332,22 @@ server <- function(input, output) {
              yaxis = list(title = "L(P)")) %>% 
       add_trace(x = c(input$AQL, input$AQL), y = c(0,1), type = "scatter", mode = "lines", name = "AQL") %>% 
       add_trace(x = c(input$RQL, input$RQL), y = c(0,1), type = "scatter", mode = "lines", name = "RQL") %>% 
-      add_trace(x = c(input$AQL), y = c(input$one_min_alpha), type = "scatter", mode = "markers", name = "RQL") %>% 
-      add_trace(x = c(input$RQL), y = c(input$beta), type = "scatter", mode = "markers", name = "RQL"))
+      add_trace(x = c(input$AQL), y = c(input$one_min_alpha), type = "scatter", mode = "markers", name = "(p_{1-alpha}], 1- alpha)") %>% 
+      add_trace(x = c(input$RQL), y = c(input$beta), type = "scatter", mode = "markers", name = "(p_beta, beta)"))
   })
-  
-  output$text <- renderPrint({
+```
+
+
+```{r, echo=FALSE}
+renderPrint({
     
     input$action
     tmp <- isolate(find_n_c(n = 1, c = 0, alpha  = 1 - input$one_min_alpha, AQL = input$AQL, beta = input$beta, RQL = input$RQL, N = input$N))
     cat("optimal plan: ", "n* = ", tmp$n,"\t", "c* = ", tmp$c)
   })
   
-  
-  
-}
-
-shinyApp(ui, server)
 ```
+
 
 
 
