@@ -7,6 +7,7 @@ runtime: shiny
 ---
 
 ```{r, include=FALSE}
+rm(list = ls(all = TRUE))
 library(dplyr)
 library(knitr)
 library(plotly)
@@ -15,38 +16,38 @@ library(shiny)
 
 
 # Funktionen
-```{r}
-rm(list = ls(all = TRUE))
 
-C_p_func <- function(go, gu, sd){ (go - gu) / (6 * sd) }
-C_pk_func <- function(go, gu, sd, mu){ min( (go - mu)/(3*sd), (mu - gu)/(3*sd) )}
-
-C_conf_func <- function(n, alpha, C, centered = TRUE, print = TRUE){
-  if(centered){
-  UG <- C * sqrt( qchisq(alpha/2, df = n -1) / (n - 1) ) 
-  OB <- C * sqrt( qchisq(1- alpha/2, df = n -1) / (n - 1) ) 
-  
-  if(print){  cat("UG = ", UG, "\t", "OB = ", OB) }
-  return(list(UG = UG, OG = OB))
-  }
-  else{
-  UG <- C * (1 - qnorm( 1 - alpha/2) * sqrt( 1 / (9 * n * C^2) + 1 / (2 * n - 2) ))
-  OB <- C * (1 + qnorm( 1 - alpha/2) * sqrt( 1 / (9 * n * C^2) + 1 / (2 * n - 2) ))
-  
-  if(print){  cat("UG = ", UG, "\t", "OB = ", OB) }
-  return(list(UG = UG, OG = OB))
-  }
-}
-```
+* `proc.cap` = $C_p$ Prozesspotenzial 
+* `proc.cap.k` = $C_{pk}$ Prozessfaehigkeit *Katayori* (Bias) 
+* `proc.cap.confi` = Konfidenzintervalle fuer `proc.cap` mit `bias = TRUE` und  `proc.cap.k` mit `bias = FALSE`
 
 
 ```{r}
-tmp <- C_conf_func(n = 20, alpha = 0.05, C = 1.2579, centered = TRUE)
+proc.cap <- function(go, gu, sd){ (go - gu) / (6 * sd) }
+proc.cap.k <- function(go, gu, sd, mu){ min( (go - mu)/(3*sd), (mu - gu)/(3*sd) )}
+
+proc.cap.confi <- function(n, alpha, C, bias = TRUE, print = TRUE){
+  if(bias){
+    UG <- C * sqrt( qchisq(alpha/2, df = n -1) / (n - 1) ) 
+    OB <- C * sqrt( qchisq(1- alpha/2, df = n -1) / (n - 1) ) 
+    if(print){  cat("UG = ", UG, "\t", "OB = ", OB) }
+    return(list(UG = UG, OG = OB))
+    }
+  if(!bias){
+    UG <- C * (1 - qnorm( 1 - alpha/2) * sqrt( 1 / (9 * n * C^2) + 1 / (2 * n - 2) ))
+    OB <- C * (1 + qnorm( 1 - alpha/2) * sqrt( 1 / (9 * n * C^2) + 1 / (2 * n - 2) ))
+    if(print){  cat("UG = ", UG, "\t", "OB = ", OB) }
+    return(list(UG = UG, OG = OB))
+  }
+ }
 ```
+
+***
 
 
 # Aufgabe 1
 
+Bestimmen des Prozessfaehigkeitskoeffizienten dessen Konfidenzintervall fuer ein Prozess mit folgenden Qualitaetsmerkmalen:
 ```{r}
 n <- 40 
 Xbar <- 10.01
@@ -55,152 +56,217 @@ gu <- 9.9
 go <- 10.1
 alpha <- 0.05
 ```
-**Prozessfaehigkeitsindex $\hat{C}_p$**
+
+*Prozessfaehigkeitskoeffizienten $\hat{C}_p$$*
 ```{r}
-C_p <- C_p_func(go= go, gu = gu, sd = S)
-paste("C_p = ", round(C_p,2))
+C_p <- proc.cap(go= go, gu = gu, sd = S)
+cat("C_p = ", round(C_p,2))
+
 ```
-**Konfidenzintervall**
+
+*Konfidenzintervall fuer  $\hat{C}_p$*
+
 ```{r}
-error <- qnorm(1-alpha/2) * S / sqrt(n)
-Wu <-  Xbar - error
-Wo <- Xbar + error
-paste(c("Wu = ", "Wo = "),c( round(Wu, 2), round(Wo, 2)) )
+tmp <- proc.cap.confi(n = n, alpha = alpha, C = C_p, bias = FALSE, print = TRUE)
 ```
+
+
 
 ***
 
 # Aufgabe 2
-## (a) $\bar{X}$ - Karte: *"Laenge von Nieten"*
 
+```{r, include=FALSE}
+nieten_tbl <- read.csv2("example_7.4.csv", header = TRUE, sep = ";", dec = ",")
+```
+
+
+
+## (a) Laenge von Nieten
+
+Betrachtet wird das Qualitaetsmerkmal die Laenge von Nieten.  
+
+Die ertsen 10 Zeilen der Datentabelle sehen wie folgt aus:
+```{r, echo=FALSE}
+kable(head(nieten_tbl, 10))
+```
+
+Im ersten Schritt wird das Qualitaertsmerkmal hinsichtlich seiner Prozessfaehigkeit ueberprueft.  
+
+
+Hier liegen folgene Daten vor:
 ```{r}
 n <- 20
 Xbar <- 20.08
 S <- 0.053
 gu <- 19.8
 go <- 20.2
+
 ```
 
-**Prozessfaehigkeitsindex $\hat{C}_p$**
+*Prozessfaehigkeitskoeffizient und Konfidenzintervall $\hat{C}_p$*
 ```{r}
-C_p <- C_p_func(go = go, gu = gu, sd = S)
+C_p <- proc.cap(go = go, gu = gu, sd = S)
 paste("C_p = ", round(C_p,2))
-C_p_conf <- C_conf_func(n = n, alpha = alpha, C = C_p, centered = TRUE)
+C_p_conf <- proc.cap.confi(n = n, alpha = alpha, C = C_p, bias  = TRUE)
 ```
 
 
-**Prozessfaehigkeitsindex $\hat{C}_{pk}$**
+*Prozessfaehigkeitskoeffizient und Konfodenzintervall $\hat{C}_{pk}$*
 ```{r}
-C_pk <- C_pk_func(go = go, gu <- gu, sd = S, mu <- Xbar)
+C_pk <- proc.cap.k(go = go, gu <- gu, sd = S, mu <- Xbar)
 paste("C_pk = ", round(C_pk,2))
-C_pk_conf <- C_conf_func(n = n, alpha = alpha, C = C_pk, centered = FALSE)
+C_pk_conf <- proc.cap.confi(n = n, alpha = alpha, C = C_pk, bias = FALSE)
+```
+
+(*Anmerkung: während die Werte für $C_p$ noch im akzeptablen Bereich liegen, ist das für $C_{pk}$ nicht der Fall*)
+
+
+*$\bar{X}$ - Karte*  
+Fuer die Berrechnung der $\bar{X}$ - Karte stehen folgende Richtwerte des Prozesses zur Verfuegung:
+```{r}
+#Sollmaße
+mu0 <- 20
+sig <- 0.1
+n_j <- 5
+
+# Tolleranz der Grenzen 
+w <- 1.96
+k <- 3
+```
+
+Die Warn - und Kontrollgrenzen lauten:
+```{r}
+(Wu <- mu0 - w * sig / sqrt(n_j))
+(Wo <- mu0 + w * sig / sqrt(n_j))
+(Ku <- mu0 - k * sig / sqrt(n_j))
+(Ko <- mu0 + k * sig / sqrt(n_j))
+```
+
+Die Datenwerte werden in 6 Untergruppen $n_j, j = 1, \ldots, 6,$ mit der jeweils 5 Messungen erfasst und die Gruppenmittelwerte $\bar{X}_j$ ermittelt um rueckwirkend zu ueberpruefen, ob der Prozess fuer die $j$-te Gruppe unter Kontrolle war.
+```{r}
+df <- nieten_tbl %>% 
+  group_by(Untergruppe) %>% 
+  summarise(Xbar_j = mean(Laenge)) %>% 
+  mutate(Check = ifelse(between(Xbar_j, Wu, Wo), "",
+                        ifelse(between(Xbar_j,Ku, Ko), "Warnung", "ausser Kontrolle")))
+kable(df)
+
+```
+
+Die zugehoerige $\bar{X}$ - Karte ist in der nachfolgen Abbildung zu sehen.
+```{r, fig.width=10}
+plot_ly(df, x =~ Untergruppe, 
+        y = ~ Xbar_j, 
+        mode = "lines + marker", 
+        type = "scatter",
+        name = "Xbar",
+        color = I('black')) %>% 
+  add_trace(y = Wo, mode = "lines", name = "Wo", line = list(dash = "dash")) %>% 
+  add_trace(y = Ko, mode = "lines", name = "Ko", line = list(dash = "dash")) %>% 
+  add_trace(y = Wu, mode = "lines", name = "Wu", line = list(dash = "dash")) %>% 
+  add_trace(y = Ku, mode = "lines", name = "Ku", line = list(dash = "dash")) %>% 
+  add_trace(y = mu0, mode = "lines", name = "mu0") %>% 
+  layout(xaxis = list(title = "Charge"),
+         yaxis = list(title = "Xbar"),
+         title = "Xbar - Karte",
+         font = list(family = 'sans serif',
+                     color = '#264E86')) %>% 
+  filter(Check %in% c("Warnung", "ausser Kontrolle")) %>% 
+  layout(annotations = list(x = ~ Untergruppe, 
+                            y = ~ Xbar_j, 
+                            text = ~Check, 
+                            arrowhead = 2, 
+                            arrowsize = 1.2,
+                            ax = 20,
+                            ay = -60,
+                            font = list(color = '#264E86',
+                                        family = 'sans serif',
+                                        size = 20)
+                            )
+         )
 ```
 
 
 
-## (b) u - Karte / p - Karte: *"Fehler in produzierten Stoffballen"*
 
-Produzierte Stoffballen werden hinsichtlich der Fehlerzahl ueberwacht. Als u0 wird nach Voruntersuchungen 0.25 angesetzt. 
-Außerdem sei w = 1.64485 und κ = 2.78215.
-Es wird die u - Karte mit der p -Karte verglichen um die Prozesskonsistenz zu validieren.  
+## (b) Fehler in produzierten Stoffballen
 
-> Aus der Tabelle erkennt man, dass der Prozess bei beiden Karten im achten Los außer Kontrolle ist. 
+  Produzierte Stoffballen werden hinsichtlich der Fehlerzahl ueberwacht. Als $u_0$ wird nach Voruntersuchungen 0.25 angesetzt. 
+  Ausserdem sei $\omega$ = 1.64485 und $\kappa$ = 2.78215.  
+  
+  Die Lose $i$ sind mit Anzahl der Defekten $X_i$ und Anzahl der geprueften Teile $m_i$:
+```{r, echo=FALSE}
+los_data <- data.frame(X_i = c(4,3,11,1,3,9,4,13,5,1),
+                       m_i = c(20,18,24,14,19,29,21,15,18,22))
 
+kable(los_data)
+
+```
+
+
+Die vorgegenene Richtwerte des Prozesses sind:
 ```{r}
 u0 <- 0.25
 w <- qnorm(0.95)
 k <- qnorm(0.9973)
-los_data <- data.frame(X_i = c(4,3,11,1,3,9,4,13,5,1),
-                       m_i = c(20,18,24,14,19,29,21,15,18,22))
+```
 
-los_data <- los_data %>% mutate(
-   # u - Karte
-  u_i =  X_i / m_i,
-  Wo_u = u0 + w * sqrt(u0 /m_i),
-  Ko_u = u0 + k * sqrt(u0 /m_i),
-  Check_u = ifelse(u_i > Ko_u, "ausßer Kontrolle", ifelse(u_i > Wo_u, "Warnung", "")) ,
-  # p - Karte
-  Wo_p = u0 + w * sqrt(u0 * (1 - u0) / m_i),
-  Ko_p = u0 + k * sqrt(u0 * (1 - u0) / m_i),
-  Check_p = ifelse(u_i > Ko_p, "ausßer Kontrolle", ifelse(u_i > Wo_p, "Warnung", ""))
-  
-)
+
+In der nachfolgenden Tabelle sind Datenwerte udn die Entscheidungsgrenzen des Prozeses hinsichtlich der Vorgabensd
+
+```{r}
+los_data <- los_data %>% 
+  mutate(u_i =  X_i / m_i,
+         Wo_u = u0 + w * sqrt(u0 /m_i),
+         Ko_u = u0 + k * sqrt(u0 /m_i),
+         Check = ifelse(u_i > Ko_u, "ausser Kontrolle", 
+                          ifelse(u_i > Wo_u, "Warnung", "")
+                          )
+  )
 
 kable(los_data, format = "markdown", digits = 2, row.names = nrow(los_data))
 
 ```
 
+Die zugehoerige u - Karte ist in der nachfolgen Abbildung zu sehen.
 
-In dem nachfolgenden Grafen ist der Prozessverlauf der 10 Lose und die oberen Warn- und Kontrollgrenzen der u - Karte und der p - Karte dargestellt.
+```{r, fig.height=8, fig.width =10}
+Wo_stepfun <- stepfun(1:9 + 0.5, los_data$Wo_u, f = 0)
+Ko_stepfun <- stepfun(1:9 + 0.5, los_data$Ko_u, f = 0)
 
-```{r, fig.height=8}
-Wo_u_fun <- stepfun( 1:9 + 0.5, los_data$Wo_u, f = 0)
-Ko_u_fun <- stepfun(1:9 + 0.5, los_data$Ko_u, f = 0)
-Wo_p_fun <- stepfun(1:9 + 0.5, los_data$Wo_p, f = 0)
-Ko_p_fun <- stepfun(1:9 + 0.5, los_data$Ko_p, f = 0)
+x <-  c(1:nrow(los_data))
 
-
-plot(Wo_u_fun, 
-     lty = 4, 
-     lwd = 2, 
-     col = "blue",
-     axes = FALSE,
-     ylim = c(0:1),
-     xlab = "Charge", 
-     ylab = expression(X[i] / m[i]), 
-     main = "")
-
-par(new=TRUE)
-plot(Ko_u_fun, 
-     lty = 2, 
-     lwd = 2,
-     col = "blue",
-     axes = FALSE, 
-     ylim = c(0:1),
-     xlab="", 
-     ylab="", 
-     main = "")
-
-par(new=TRUE)
-plot(Wo_p_fun, 
-     lty = 4, 
-     lwd = 2,
-     col = "purple",
-     axes = FALSE, 
-     ylim = c(0:1),
-     xlab="", 
-     ylab="", 
-     main = "")
-
-par(new=TRUE)
-plot(Ko_p_fun, 
-     lty = 2, 
-     lwd = 2,
-     col = "purple",
-     axes = FALSE, 
-     ylim = c(0:1),
-     xlab="", 
-     ylab="", 
-     main = "")
-
-
-lines(x = 1:10, y = los_data$u_i, type ="o")
-abline(h = u0, col = "green", lwd = 2 )
-
-axis(1, 0:10.5)
-axis(2, seq(0,1, by = 0.1))
-
-legend("topright", c("Prozess","u - Karte", "p - Karte", expression(u[0])), lty = c(1,1,1,1), col = c("black","blue", "purple", "green"), lwd = c(1,2,2,2))
+los_data %>%  
+  mutate(x = c(1:nrow(los_data))) %>% 
+  plot_ly(x = ~ x, 
+        color = I('black') ) %>%
+  add_lines(x =~ x + 0.5, y = Wo_stepfun(x), name = "Wo", line = list(shape = "vh", dash = "dash")) %>% 
+  add_lines(x = ~x + 0.5, y = Ko_stepfun(x), name = "Ko", line = list(shape = "vh", dash = "dash")) %>% 
+  add_trace(y = ~u_i, name = "u_i", mode = "lines + marker", type = "scatter") %>% 
+  layout(title = "u - Karte",
+         xaxis = list(title = "Charge"),
+         yaxis = list(title = "Xbar"),
+         font = list(family = 'sans serif',
+                     color = '#264E86')) %>% 
+  filter(Check %in% c("Warnung", "ausser Kontrolle")) %>% 
+  layout(annotations = list(x = ~x, 
+                            y = ~u_i,
+                            text = ~Check,
+                            ay = -100,
+                            font = list(size = 15)
+                            )
+         )
 	
 ```
 
 
-#Aufgabe 3
-Bestimmen der Operationscharaczeristrik eines einfachen Prüfplans mit 
+***
 
-* *N* = 1000  
-* *c* = 4  
-* *n* = 100
+
+
+# Aufgabe 3
+Bestimmen der Operationscharacteristrik eines einfachen Prüfplans mit:
 
 ```{r}
 N <- 1000
@@ -208,12 +274,13 @@ c <- 4
 n <- 100
 ```
 
-**Operationscharacteristik L(p)**
+**Operationscharakteristik L(p)**
 
+Die Funktion zur Berechnung der Operationscharacteristik:
 ```{r}
 L_p_func <- function(N, n, c, p, print = TRUE){
   
-  # PART: sanity check part------
+  # PART: sanity check ------
   stopifnot(p <= 1 & p >= 0 ) # check whether p is element (0,1)
   for (x in c(N,n,c)){
     # N, n, c must be a integer/ double
@@ -246,20 +313,48 @@ L_p_func <- function(N, n, c, p, print = TRUE){
 ```
 
 
-**Test**
-
+Die Funktion `L_p_func` aufgerufen mit dem angegeben Parametern der Aufgabe ergit dann die nachfolgende OC:
 ```{r}
-L_p <- L_p_func(N = 100, n = 10, c = 3, p = seq(0,1, by = 0.1), print = TRUE)
+L_p <- L_p_func(N = 1000, n = 100, c = 4, p = seq(0,1, by = 0.01), print = TRUE)
+```
 
-plot_ly(x = L_p$p, y = L_p$L, type = "scatter", mode = "lines") %>% 
+Die Grafik zeigt den Verlauf der OC Kurve:
+```{r, fig.width=10}
+data.frame(L_p) %>% 
+  plot_ly(x = ~ p, y = ~L, type = "scatter", mode = "lines", color = I("black")) %>%
   layout(xaxis = list(title = "p"),
-         yaxis = list(title = "L(P)"))
-
+         yaxis = list(title = "L(P)"),
+         title = "OC Kurve",
+         font = list(family = 'sans serif',
+                     color = '#264E86')) %>% 
+  filter(L == 0) %>% 
+  group_by(L) %>% 
+  summarise(p = min(p)) %>% 
+  layout(annotations = list(x = ~p,
+                            y = ~L,
+                            text = ~paste("L(",p,") = 0"),
+                            font = list(size = 20))
+         )
 ```
 
 
-**Algorithmus von Guenther**
 
+## Aufgabe 5
+Es mit hilfe des Algorithmuses von Guenther soll ein optimaler Plan (*n-c*) gefunden werden, unter der Voraussetzung, dass die Bedingungen
+
+* $L_{N,n,c}(p) \geq 1- \alpha$ 
+* $L_{N,n,c}(p) \leq \beta$  
+
+eingehalten werden bei moeglichst kleinem *n*.
+
+### Algorithmus von Guenther
+
+Die nachfolgende App kann einzeln aufgerufen werden unter:  
+-   [shiyapp.server](https://dennistriepke.shinyapps.io/hyp_operation_characteristic/)  
+-   [Download Code](https://github.com/dtriepke/Qualitaetskontrolle/tree/Task-3-edit/Shiny_app)  
+
+
+Zu Beginn wird die Funktion `find_n_c` programmiert um den optimalen Plan zu finden. 
 ```{r}
 find_n_c <- function(n = 1, c = 0, 
                      alpha, 
@@ -295,57 +390,59 @@ find_n_c <- function(n = 1, c = 0,
 
 ```
 
-**Test**
-```{r}
-find_n_c(n = 1, c = 0, alpha  = 0.05, AQL = 0.01, beta = 0.1, RQL = 0.04, N = 400)
-
-```
-
-
+***
+### App Algorithmus von Guenther fuer Hypergeometrische Verteilungen
 ```{r, echo=FALSE}
-sliderInput(inputId = "one_min_alpha", label = "1 - alpha",
-                  value = 1, min = 0, max = 1)
-    
-sliderInput(inputId = "AQL", label = "AQL",
-                  value = 1, min = 0, max = 1)
-
-      sliderInput(inputId = "beta", label = "beta",
-                  value = 1, min = 0, max = 1)
-      
-      sliderInput(inputId = "RQL", label = "RQL",
-                  value = 1, min = 0, max = 1)
-      
-      numericInput(inputId = "N", label = "N",
-                   value = 400, min = 1, max = 5000)
-      
-      actionButton("action", label = "find optimal plan")
+wellPanel(div(strong("Author: Dennis Triepke")),
+          span("Algorithmus from Guenther is used in order to find the optimal plan vor n and c for a hypergeometrical distribution. ")
+          )
 ```
+
+**Control Panal**
+```{r, echo = FALSE}
+sliderInput(inputId = "one_min_alpha", label = "1 - alpha", value = 0.95, min = 0, max = 1)
+sliderInput(inputId = "AQL", label = "AQL", value = 0.2, min = 0, max = 1)
+sliderInput(inputId = "beta", label = "beta", value = 0.1, min = 0, max = 1)
+sliderInput(inputId = "RQL", label = "RQL", value = 0.5, min = 0, max = 1)
+numericInput(inputId = "N", label = "N", value = 400, min = 1, max = 5000)
+```
+
 
 ```{r, echo=FALSE}
 renderPlotly({
     input$action
     tmp <- isolate(find_n_c(n = 1, c = 0, alpha  = 1 - input$one_min_alpha, AQL = input$AQL, beta = input$beta, RQL = input$RQL, N = input$N))
     L_p <- isolate(L_p_func(N = input$N, n = tmp$n, c = tmp$c, p = seq(0,1, by = 0.01), print = FALSE))
-    
-    isolate(plot_ly(x = L_p$p, y = L_p$L, type = "scatter", mode = "lines", name = "L(p)") %>% 
+
+    isolate(data.frame(L_p) %>% 
+              plot_ly(x = ~p, y = ~L, type = "scatter", mode = "lines", name = "L(p)", color = I("black")) %>%
       layout(xaxis = list(title = "p"),
-             yaxis = list(title = "L(P)")) %>% 
-      add_trace(x = c(input$AQL, input$AQL), y = c(0,1), type = "scatter", mode = "lines", name = "AQL") %>% 
-      add_trace(x = c(input$RQL, input$RQL), y = c(0,1), type = "scatter", mode = "lines", name = "RQL") %>% 
-      add_trace(x = c(input$AQL), y = c(input$one_min_alpha), type = "scatter", mode = "markers", name = "(p_{1-alpha}], 1- alpha)") %>% 
-      add_trace(x = c(input$RQL), y = c(input$beta), type = "scatter", mode = "markers", name = "(p_beta, beta)"))
+             yaxis = list(title = "L(P)"),
+             title = "OC Kurve",
+             font = list(family = 'sans serif',
+                     color = '#264E86')) %>%
+      add_trace(x = c(input$AQL, input$AQL), y = c(0, input$one_min_alpha), type = "scatter", mode = "lines", name = "AQL") %>%
+      add_trace(x = c(input$RQL, input$RQL), y = c(0,input$beta), type = "scatter", mode = "lines", name = "RQL") %>%
+      add_trace(x = c(input$AQL), y = c(input$one_min_alpha), type = "scatter", mode = "markers", name = "(p_{1-alpha}], 1- alpha)") %>%
+      add_trace(x = c(input$RQL), y = c(input$beta), type = "scatter", mode = "markers", name = "(p_beta, beta)")
+      )
   })
+
+optPlan <- reactive(quote({
+    tmp <- find_n_c(n = 1, c = 0, alpha  = 1 - input$one_min_alpha, AQL = input$AQL, beta = input$beta, RQL = input$RQL, N = input$N)
+    as.data.frame(tmp)
+  }), quoted = TRUE)
+
+output$text <- renderText({
+    df <- optPlan()
+    isolate(paste("n*:", df$n, "  c*:", df$c)) })
 ```
 
 
 ```{r, echo=FALSE}
-renderPrint({
-    
-    input$action
-    tmp <- isolate(find_n_c(n = 1, c = 0, alpha  = 1 - input$one_min_alpha, AQL = input$AQL, beta = input$beta, RQL = input$RQL, N = input$N))
-    cat("optimal plan: ", "n* = ", tmp$n,"\t", "c* = ", tmp$c)
-  })
-  
+wellPanel(span(strong("Optimal Plan:"), 
+                  textOutput("text"))
+)
 ```
 
 

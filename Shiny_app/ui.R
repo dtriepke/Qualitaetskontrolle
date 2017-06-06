@@ -11,13 +11,13 @@ ui <- fluidPage(
     column(4,
            wellPanel(
              h4("Control Panel"),
-             sliderInput(inputId = "one_min_alpha", label = "1 - alpha", value = 1, min = 0, max = 1),
-             sliderInput(inputId = "AQL", label = "AQL", value = 1, min = 0, max = 1),
-             sliderInput(inputId = "beta", label = "beta", value = 1, min = 0, max = 1),
-             sliderInput(inputId = "RQL", label = "RQL", value = 1, min = 0, max = 1),
+             sliderInput(inputId = "one_min_alpha", label = "1 - alpha", value = 0.95, min = 0, max = 1),
+             sliderInput(inputId = "AQL", label = "AQL", value = 0.2, min = 0, max = 1),
+             sliderInput(inputId = "beta", label = "beta", value = 0.1, min = 0, max = 1),
+             sliderInput(inputId = "RQL", label = "RQL", value = 0.5, min = 0, max = 1),
              numericInput(inputId = "N", label = "N", value = 400, min = 1, max = 5000)
-           ),
-           actionButton("action", label = "find optimal plan") 
+           )
+           # actionButton("action", label = "find optimal plan") 
     ),  
     column(8,
            wellPanel(

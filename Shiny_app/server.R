@@ -5,7 +5,7 @@ library(plotly)
 
 server <- function(input, output) {
   
-  # Function for generating operatin characteristic
+  # Function for generating operation characteristic
   L_p_func <- function(N, n, c, p, print = TRUE){
     
     # PART: sanity check part------
@@ -38,6 +38,7 @@ server <- function(input, output) {
     return(output)
   }
   
+  # Function for optimal (n-c)
   find_n_c <- function(n = 1, c = 0, 
                        alpha, 
                        AQL, # p_{1- alpha}
@@ -70,31 +71,36 @@ server <- function(input, output) {
     
   }
   
+  
   optPlan <- reactive(quote({
-    input$action
-    tmp <- isolate(find_n_c(n = 1, c = 0, alpha  = 1 - input$one_min_alpha, AQL = input$AQL, beta = input$beta, RQL = input$RQL, N = input$N))
+    tmp <- find_n_c(n = 1, c = 0, alpha  = 1 - input$one_min_alpha, AQL = input$AQL, beta = input$beta, RQL = input$RQL, N = input$N)
     as.data.frame(tmp)
   }), quoted = TRUE)
   
   
   output$plot <- renderPlotly({
-    input$action
+    
+    # find opt plan
     df <- optPlan()
     n <- df$n
     c <- df$c
-    L_p <- isolate(L_p_func(N = input$N, n = n, c = c, p = seq(0,1, by = 0.01), print = FALSE))
+    L_p <- L_p_func(N = input$N, n = n, c = c, p = seq(0,1, by = 0.01), print = FALSE)
     
-    isolate(plot_ly(x = L_p$p, y = L_p$L, type = "scatter", mode = "lines", name = "L(p)") %>% 
-              layout(xaxis = list(title = "p"),
-                     yaxis = list(title = "L(P)")) %>% 
-              add_trace(x = c(input$AQL, input$AQL), y = c(0,1), type = "scatter", mode = "lines", name = "AQL") %>% 
-              add_trace(x = c(input$RQL, input$RQL), y = c(0,1), type = "scatter", mode = "lines", name = "RQL") %>% 
-              add_trace(x = c(input$AQL), y = c(input$one_min_alpha), type = "scatter", mode = "markers", name = "L(p_1-alpha)") %>% 
-              add_trace(x = c(input$RQL), y = c(input$beta), type = "scatter", mode = "markers", name = "L(p_beta)"))
+    # Plot curve
+    data.frame(L_p) %>% 
+      plot_ly(x = ~p, y = ~L, type = "scatter", mode = "lines", name = "L(p)", color = I("black")) %>%
+      layout(xaxis = list(title = "p"),
+             yaxis = list(title = "L(P)"),
+             title = "OC Kurve",
+             font = list(family = 'sans serif',
+                         color = '#264E86')) %>%
+      add_trace(x = c(input$AQL, input$AQL), y = c(0, input$one_min_alpha), type = "scatter", mode = "lines", name = "AQL") %>%
+      add_trace(x = c(input$RQL, input$RQL), y = c(0,input$beta), type = "scatter", mode = "lines", name = "RQL") %>%
+      add_trace(x = c(input$AQL), y = c(input$one_min_alpha), type = "scatter", mode = "markers", name = "(p_{1-alpha}], 1- alpha)") %>%
+      add_trace(x = c(input$RQL), y = c(input$beta), type = "scatter", mode = "markers", name = "(p_beta, beta)")
   })
   
   output$text <- renderText({
-    input$action
     df <- optPlan()
     isolate(paste("n*:", df$n, "  c*:", df$c))
     
