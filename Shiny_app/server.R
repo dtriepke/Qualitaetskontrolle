@@ -53,22 +53,16 @@ server <- function(input, output) {
     if(L_AQL$L >= `1-alpha` & L_RQL$L <= beta){
       return(list(n = n, c = c))
     }
-    
     while(L_RQL$L > beta){
       n <- n + 1
       L_RQL <- L_p_func(N = N, n = n, c = c, p = RQL, print = FALSE)
     }
-    
     L_AQL <- L_p_func(N = N, n = n, c = c, p = AQL, print = FALSE)
-    
-    
     if(L_AQL$L >= `1-alpha`){
       return(list(n = n, c = c))
     }
-    
     c <- c + 1
     find_n_c(n = n, c = c, alpha, AQL, beta, RQL, N)
-    
   }
   
   

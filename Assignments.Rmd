@@ -13,13 +13,18 @@ library(knitr)
 library(plotly)
 library(shiny)
 ```
+**Author: Dennis Triepke**
 
+***
 
 # Funktionen
+Nachfolgedn sind alle Funktionen dieses Blattes aufgelistet.
+
+### Prozessfaehigkeit
 
 * `proc.cap` = $C_p$ Prozesspotenzial 
 * `proc.cap.k` = $C_{pk}$ Prozessfaehigkeit *Katayori* (Bias) 
-* `proc.cap.confi` = Konfidenzintervalle fuer `proc.cap` mit `bias = TRUE` und  `proc.cap.k` mit `bias = FALSE`
+* `proc.cap.confi` = Konfidenzintervalle fuer $C_p$ mit `bias = TRUE` und  $C_{pk}$  mit `bias = FALSE`
 
 
 ```{r}
@@ -42,8 +47,117 @@ proc.cap.confi <- function(n, alpha, C, bias = TRUE, print = TRUE){
  }
 ```
 
-***
 
+### einfache Pruefplaene
+
+* `L_p_fun` = $L_{N,n,c}(p)$ Operationscharakteristik  
+* `find_n_c` = Algorithmus von Guenther fuer optimale Strategie $(n-c)$
+* `AFI` = mittlerer Puefaufwand *(engl. average fraction inspection)* 
+
+```{r}
+L_p_func <- function(N, n, c, p, print = TRUE){
+  
+  # PART: sanity check ------
+  stopifnot(p <= 1 & p >= 0 ) # check whether p is element (0,1)
+  for (x in c(N,n,c)){
+    # N, n, c must be a integer/ double
+    stopifnot(abs(x - round(x)) < .Machine$double.eps^0.5)
+  }
+  
+  # PART: claculation --------
+  p_range <- p # p can be a scalar or a set
+  L <- NA # initial entry will be removed after loop
+  
+  # first loop takes the entired subspace from the definition range over p and...
+  for (p in p_range){
+    # ... calc M regarding p = M/N
+    M <- round(p*N, 0)
+    
+    # second loop calc a for a given p the operation characteristic cummulative (prop.)
+    tmp <- 0 # temporarly storage
+    for ( i in c(0:c)){
+      tmp <- tmp + dhyper(i, M, N - M, n)
+    } 
+    L <- c(L, tmp) # storage the result for L in a vector
+  }
+  
+  # PART: output settings -----
+  output <- list(L = L[-1], p = p_range) 
+  if(print){cat(paste0("L(",p_range,") = ", paste0(round(output$L,5), ";  ") ))}
+  return(output)
+}
+
+
+find_n_c <- function(n = 1, c = 0, 
+                     alpha, 
+                     AQL, # p_{1- alpha}
+                     beta, 
+                     RQL, # p_{beta}
+                     N){
+
+  `1-alpha` <- 1 - alpha
+  L_AQL <- L_p_func(N = N, n = n, c = c, p = AQL, print = FALSE)
+  L_RQL <- L_p_func(N = N, n = n, c = c, p = RQL, print = FALSE)
+  
+  # trivila case: if initial equals optimal plan stop.
+  if(L_AQL$L >= `1-alpha` & L_RQL$L <= beta){
+    return(list(n = n, c = c))
+  }
+  
+  # condition one:
+  while(L_RQL$L > beta){
+    n <- n + 1
+    L_RQL <- L_p_func(N = N, n = n, c = c, p = RQL, print = FALSE)
+  } 
+  
+  # condition two:
+  L_AQL <- L_p_func(N = N, n = n, c = c, p = AQL, print = FALSE)
+  if(L_AQL$L >= `1-alpha`){
+     return(list(n = n, c = c))
+  }
+  
+  # if condition one holds but condition two failed do c + 1 and run the function again (recursiv)
+  c <- c + 1
+  find_n_c(n = n, c = c, alpha, AQL, beta, RQL, N) 
+  
+} 
+
+
+AFI <- function(N, n, c, p){
+  
+  # Initials 
+  p_range <- p
+  B <- NA
+  A <- NA
+  
+    for(p in p_range){
+    
+    # A-Summand
+    tmp <-  L_p_func(N = N, n = n, c = c, p = p ,print = FALSE) 
+    tmp <- n *tmp$L
+    A <- c(A,tmp)
+    
+    # B-Summand
+    M <- round(p * N,0)
+    tmp <- 0
+    for(l in c(c+1:n)){
+      tmp <- tmp + dhyper(c+1, M, N - M, l)
+      }
+    B <- c(B,tmp)
+    }
+  
+  A <- A[-1]
+  B <- B[-1] * ( c + 1)
+    
+  AFI <- A + B 
+  return(list(values = AFI, p = p_range))
+  
+}
+
+```
+
+
+***
 
 # Aufgabe 1
 
@@ -57,35 +171,31 @@ go <- 10.1
 alpha <- 0.05
 ```
 
-*Prozessfaehigkeitskoeffizienten $\hat{C}_p$$*
+**Prozessfaehigkeitskoeffizienten $\hat{C}_p$**
 ```{r}
 C_p <- proc.cap(go= go, gu = gu, sd = S)
 cat("C_p = ", round(C_p,2))
 
 ```
 
-*Konfidenzintervall fuer  $\hat{C}_p$*
+**Konfidenzintervall fuer  $\hat{C}_p$**
 
 ```{r}
 tmp <- proc.cap.confi(n = n, alpha = alpha, C = C_p, bias = FALSE, print = TRUE)
 ```
 
 
-
 ***
 
 # Aufgabe 2
+
+## (a) Laenge von Nieten
 
 ```{r, include=FALSE}
 nieten_tbl <- read.csv2("example_7.4.csv", header = TRUE, sep = ";", dec = ",")
 ```
 
-
-
-## (a) Laenge von Nieten
-
 Betrachtet wird das Qualitaetsmerkmal die Laenge von Nieten.  
-
 Die ertsen 10 Zeilen der Datentabelle sehen wie folgt aus:
 ```{r, echo=FALSE}
 kable(head(nieten_tbl, 10))
@@ -104,28 +214,28 @@ go <- 20.2
 
 ```
 
-*Prozessfaehigkeitskoeffizient und Konfidenzintervall $\hat{C}_p$*
+**Prozessfaehigkeitskoeffizient und Konfidenzintervall $\hat{C}_p$**
 ```{r}
 C_p <- proc.cap(go = go, gu = gu, sd = S)
-paste("C_p = ", round(C_p,2))
+cat("C_p = ", round(C_p,2))
 C_p_conf <- proc.cap.confi(n = n, alpha = alpha, C = C_p, bias  = TRUE)
 ```
 
 
-*Prozessfaehigkeitskoeffizient und Konfodenzintervall $\hat{C}_{pk}$*
+**Prozessfaehigkeitskoeffizient und Konfodenzintervall $\hat{C}_{pk}$**
 ```{r}
 C_pk <- proc.cap.k(go = go, gu <- gu, sd = S, mu <- Xbar)
-paste("C_pk = ", round(C_pk,2))
+cat("C_pk = ", round(C_pk,2))
 C_pk_conf <- proc.cap.confi(n = n, alpha = alpha, C = C_pk, bias = FALSE)
 ```
 
-(*Anmerkung: während die Werte für $C_p$ noch im akzeptablen Bereich liegen, ist das für $C_{pk}$ nicht der Fall*)
+(*Anmerkung: waehrend die Werte fuer $C_p$ noch im akzeptablen Bereich liegen, ist das fuer $C_{pk}$ nicht der Fall*)
 
 
-*$\bar{X}$ - Karte*  
+**$\bar{X}$ - Karte**   
 Fuer die Berrechnung der $\bar{X}$ - Karte stehen folgende Richtwerte des Prozesses zur Verfuegung:
 ```{r}
-#Sollmaße
+#Sollmasse
 mu0 <- 20
 sig <- 0.1
 n_j <- 5
@@ -186,7 +296,6 @@ plot_ly(df, x =~ Untergruppe,
                             )
          )
 ```
-
 
 
 
@@ -266,7 +375,7 @@ los_data %>%
 
 
 # Aufgabe 3
-Bestimmen der Operationscharacteristrik eines einfachen Prüfplans mit:
+Bestimmen der Operationscharacteristrik eines einfachen Pruefplans mit:
 
 ```{r}
 N <- 1000
@@ -276,44 +385,7 @@ n <- 100
 
 **Operationscharakteristik L(p)**
 
-Die Funktion zur Berechnung der Operationscharacteristik:
-```{r}
-L_p_func <- function(N, n, c, p, print = TRUE){
-  
-  # PART: sanity check ------
-  stopifnot(p <= 1 & p >= 0 ) # check whether p is element (0,1)
-  for (x in c(N,n,c)){
-    # N, n, c must be a integer/ double
-    stopifnot(abs(x - round(x)) < .Machine$double.eps^0.5)
-  }
-  
-  # PART: claculation --------
-  p_range <- p # p can be a scalar or a set
-  L <- 0 # forst entry is abitrarly number and will be removed after loop
-  
-  # forst loop takes the stated subspace od the definition range
-  for (p in p_range){
-    # calc M regarding p = M/N
-    M <- round(p*N, 0)
-    
-    # second loop calc a for a given p the operation characteristic
-    tmp <- 0 # temporary storage
-    for ( i in c(0:c)){
-      tmp <- tmp + dhyper(i, M, N - M, n)
-    } 
-    L <- c(L, tmp) # storage the result for L in a vector
-  }
-  
-  # PART: output settings -----
-  output <- list(L = L[-1], p = p_range) 
-  if(print){cat(paste0("L(",p_range,") = ", paste0(round(output$L,5), ";  ") ))}
-  return(output)
-}
-
-```
-
-
-Die Funktion `L_p_func` aufgerufen mit dem angegeben Parametern der Aufgabe ergit dann die nachfolgende OC:
+Die Funktion `L_p_func()` aufgerufen mit dem angegeben Parametern der Aufgabe und einer Sequenz des kompletten Definitionsbereichs ergit dann die nachfolgende OC:
 ```{r}
 L_p <- L_p_func(N = 1000, n = 100, c = 4, p = seq(0,1, by = 0.01), print = TRUE)
 ```
@@ -337,9 +409,67 @@ data.frame(L_p) %>%
          )
 ```
 
+***
+
+# Aufgabe 4
+Fuer folgend Pruefplan soll der mittlere Durchschlupf $D(p)$ und der mittlere Pruefaufwand bestimmt werden.
+```{r}
+N <- 1000
+c <- 4
+n <- 147
+```
+##
+
+### (a) mittlerer Durchschlupf $D(p)$ und sein Maximum
+Fuer die Berechung wird zuerst  die  oben definierte Funktion `L_p_func()` mit den Parametern  `N`, `n`, `c` ueber den kompletten Definitionsbereich von $p$ (`seq(0,1, by = 0.001)`) abgetastet und anschliessend die Werte $L(p)$ (`.$L`) mit $p$ multipliziert. 
+
+```{r}
+p <- seq(0,1, by = 0.001)
+L_p <- L_p_func(N = N, n = n, c = c, p = p, print = FALSE)
+D_p <- L_p$L * p
+
+```
+
+Die Grafik zeigt den Verlauf der AOQ Kurve und der OC Kurve:
+```{r, fig.width=10}
+data.frame(D = D_p, p, L = L_p$L) %>% 
+  plot_ly(x = ~ p, y = ~D, type = "scatter", mode = "lines", color = I("black"), name = "D(p)") %>%
+  add_trace(x = ~p, y = ~L, type = "scatter", mode = "lines", name = "L(p)")  %>% 
+  layout(xaxis = list(title = "p"),
+         yaxis = list(title = "D(P) / L(p)"),
+         title = "AOQ Kurve / OC Kurve",
+         font = list(family = 'sans serif',
+                     color = '#264E86')) %>% 
+  filter(D == max(D)) %>% 
+  layout(annotations = list(x = ~p,
+                            y = ~D,
+                            text = ~paste("AOQL = D(",p,") =", round(D,4)),
+                            font = list(size = 15),
+                            ax = 150)
+         )
+```
+
+### (b) mittlerer Puefaufwand
+
+Fuer die Berechung wird die Funktion oben definierte `AFI()` mit den Parametern `N`, `n`, `c` ueber den Definitionsbereich von $p$ (`seq(0,1, by = 0.001)`) abgetatstet und anschliessend grafisch abgebildet.
+```{r}
+p <- seq(0,1, by = 0.001)
+AFI(N = N, n = n, c = c, p = p ) %>% 
+  data.frame() %>% 
+  plot_ly(x = ~p, y = ~values, type = "scatter", mode = "lines", color = I("black"), name = "D(p)") %>% 
+   layout(xaxis = list(title = "p", range = c(0,0.1)),
+          yaxis = list(title = "AFI(p)"),
+          title = "AFI Kurve",
+          font = list(family = 'sans serif',
+                      color = '#264E86'))
+```
 
 
-## Aufgabe 5
+
+***
+
+# Aufgabe 5
+***
 Es mit hilfe des Algorithmuses von Guenther soll ein optimaler Plan (*n-c*) gefunden werden, unter der Voraussetzung, dass die Bedingungen
 
 * $L_{N,n,c}(p) \geq 1- \alpha$ 
@@ -354,43 +484,10 @@ Die nachfolgende App kann einzeln aufgerufen werden unter:
 -   [Download Code](https://github.com/dtriepke/Qualitaetskontrolle/tree/Task-3-edit/Shiny_app)  
 
 
-Zu Beginn wird die Funktion `find_n_c` programmiert um den optimalen Plan zu finden. 
-```{r}
-find_n_c <- function(n = 1, c = 0, 
-                     alpha, 
-                     AQL, # p_{1- alpha}
-                     beta, 
-                     RQL, # p_{beta}
-                     N){
-
-  `1-alpha` <- 1 - alpha
-  L_AQL <- L_p_func(N = N, n = n, c = c, p = AQL, print = FALSE)
-  L_RQL <- L_p_func(N = N, n = n, c = c, p = RQL, print = FALSE)
-  
-  if(L_AQL$L >= `1-alpha` & L_RQL$L <= beta){
-    return(list(n = n, c = c))
-  }
-  
-  while(L_RQL$L > beta){
-    n <- n + 1
-    L_RQL <- L_p_func(N = N, n = n, c = c, p = RQL, print = FALSE)
-  }
-
-  L_AQL <- L_p_func(N = N, n = n, c = c, p = AQL, print = FALSE)
-  
-  
-  if(L_AQL$L >= `1-alpha`){
-     return(list(n = n, c = c))
-  }
-  
-  c <- c + 1
-  find_n_c(n = n, c = c, alpha, AQL, beta, RQL, N)
-  
-} 
-
-```
+Zu Beginn wird die Funktion `find_n_c()` programmiert um den optimalen Plan zu finden *(siehe Abschnitt Funktionen oben)*. 
 
 ***
+
 ### App Algorithmus von Guenther fuer Hypergeometrische Verteilungen
 ```{r, echo=FALSE}
 wellPanel(div(strong("Author: Dennis Triepke")),
@@ -405,6 +502,7 @@ sliderInput(inputId = "AQL", label = "AQL", value = 0.2, min = 0, max = 1)
 sliderInput(inputId = "beta", label = "beta", value = 0.1, min = 0, max = 1)
 sliderInput(inputId = "RQL", label = "RQL", value = 0.5, min = 0, max = 1)
 numericInput(inputId = "N", label = "N", value = 400, min = 1, max = 5000)
+actionButton("action", label = "find optimal plan")
 ```
 
 
@@ -420,12 +518,12 @@ renderPlotly({
              yaxis = list(title = "L(P)"),
              title = "OC Kurve",
              font = list(family = 'sans serif',
-                     color = '#264E86')) %>%
+                     color = '#264E86')) ) %>%
       add_trace(x = c(input$AQL, input$AQL), y = c(0, input$one_min_alpha), type = "scatter", mode = "lines", name = "AQL") %>%
       add_trace(x = c(input$RQL, input$RQL), y = c(0,input$beta), type = "scatter", mode = "lines", name = "RQL") %>%
       add_trace(x = c(input$AQL), y = c(input$one_min_alpha), type = "scatter", mode = "markers", name = "(p_{1-alpha}], 1- alpha)") %>%
       add_trace(x = c(input$RQL), y = c(input$beta), type = "scatter", mode = "markers", name = "(p_beta, beta)")
-      )
+      
   })
 
 optPlan <- reactive(quote({
