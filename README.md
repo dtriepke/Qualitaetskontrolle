@@ -6,4 +6,5 @@ Solutions regarding task in statistical quality control for producing and delive
 * process capability  
 * average slip  
 * average testing effort  
-* **Shiny App**  Algorithmus von Guenther for the numerical solution of finding an optimal plan
+* **Shiny App**  Algorithmus von Guenther for the numerical solution of finding an optimal plan  
+ link: https://dennistriepke.shinyapps.io/assignment_qualitaetskontrolle_ovgu/ 
